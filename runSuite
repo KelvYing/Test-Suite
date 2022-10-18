@@ -1,0 +1,46 @@
+#!/bin/bash
+if [ $# -ne 3 ]; then
+        echo "Incorrect number of arguments"
+        exit 2
+fi
+temp1=$(mktemp)
+temp2=$(mktemp)
+for f in $(cat ${1}); do
+        if [ -f "${f}.args" ]; then
+                if ! [ -r "${f}.args" ]; then
+                        echo "Error: ${f} not readable"
+                        continue
+        	else
+			if [[ -f "${f}.in" && -r "${f}.in" ]]; then
+              				${2} $(cat ${f}.args) < ${f}.in > ${temp1}
+              				${3} $(cat ${f}.args) < ${f}.in > ${temp2}
+      			else
+	      			${2} $(cat ${f}.args) > ${temp1}
+	      			${3} $(cat ${f}.args) > ${temp2}
+	   		fi
+        	fi
+        else
+		if [[ -f "${f}.in" && -r "${f}.in" ]]; then
+			${2} < ${f}.in > ${temp1}
+			${3} < ${f}.in > ${temp2}
+		else
+                	${2} > ${temp1}
+                	${3} > ${temp2}
+		fi
+        fi
+	        if ! cmp -s "${temp1}" "${temp2}"; then
+                echo -e "Test failed: ${f}\nArgs:"
+                if [ -f "${f}.args" ]; then
+                        echo -e "$(cat ${f}.args)"
+                fi
+		echo -e "Input:"
+                if [ -f "${f}.in" ]; then
+                        echo -e "$(cat ${f}.in)"
+                fi
+                echo -e "Expected:\n$(cat ${temp2})\nActual:\n$(cat ${temp1})"
+        fi
+        rm $temp1
+        rm $temp2
+
+done
+
